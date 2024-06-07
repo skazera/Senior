@@ -1,0 +1,185 @@
+Definir Alfa xSql;
+Definir Alfa xCur;
+Definir Alfa aNumCpf;
+Definir Alfa aVlrSrv;
+Definir Alfa aZero;
+Definir Alfa aIniCmp;
+Definir Alfa aFimCmp;
+Definir Alfa aDepCpf;
+
+nCodOem = 24;
+nQtdCar = 0;
+nCodCal = CodCal;
+dDatZero = 0;
+dMesInc = 0;
+dCmpEmi = 0;
+dCmpIni = 0;
+aZero = "";
+aDepCpf = ""; 
+nNumEmp = 0;
+nTipCol = 0;
+nNumCad = 0;
+dIniCmp = 0;
+nCodPla = 0;
+nCodDep = 0;
+nFuncionario = 0; 
+
+/*TrocaString(aVlrSrv, ".", "", aVlrSrv);
+TrocaString(aVlrSrv, ",", "", aVlrSrv); */
+AlfaParaInt (aVlrSrv, nVlrSer);
+                                 
+TamanhoAlfa(aNumCpf, nQtdCar);
+                            
+Se(nQtdCar < 11){
+  Enquanto(nQtdCar < 11){
+    aZero = aZero + "0"; 
+    nQtdCar++;
+  }
+  aNumCpf = aZero + aNumCpf; 
+}
+aDepCpf = aNumCpf;                                
+@ConverteMascara(5, 0, aDepCpf, "999.999.999-99");@
+AlfaParaInt(aDepCpf, nDepCpf);
+
+xSql = "SELECT NumEmp, TipCol, NumCad \
+          FROM R034FUN \
+         WHERE NumCpf = " + aNumCpf + " \ 
+           AND SitAfa <> 7";
+           
+SQL_Criar(xCur);
+SQL_DefinirComando(xCur, xSql);
+SQL_AbrirCursor(xCur);
+Se(SQL_EOF(xCur)=0)
+  {
+    SQL_RetornarInteiro(xCur, "NumEmp", nNumEmp); 
+    SQL_RetornarInteiro(xCur, "TipCol", nTipCol); 
+    SQL_RetornarInteiro(xCur, "NumCad", nNumCad);
+    nFuncionario = 1;    
+  }
+SQL_FecharCursor(xCur);
+SQL_Destruir(xCur);
+Se(nFuncionario = 0){
+  SQL_Criar(xCur);
+  SQL_DefinirComando(xCur, "SELECT NumEmp, TipCol, NumCad \
+                              FROM R036DEP \
+                             WHERE NumCpf = :nDepCpf");
+                              
+  SQL_DefinirInteiro(xCur, "nDepCpf", nDepCpf);
+                               
+  SQL_AbrirCursor(xCur);
+  Se(SQL_EOF(xCur)=0)
+    {
+     SQL_RetornarInteiro(xCur, "NumEmp", nNumEmp); 
+     SQL_RetornarInteiro(xCur, "TipCol", nTipCol); 
+     SQL_RetornarInteiro(xCur, "NumCad", nNumCad);
+    }
+  SQL_FecharCursor(xCur);
+  SQL_Destruir(xCur);  
+}
+@------------------------------------------------------------------------------@
+Se(EDatCmp = 0){
+  SQL_Criar(xCur);
+  SQL_DefinirComando(xCur, "SELECT INICMP \
+                              FROM R044CAL \
+                             WHERE NumEmp = :nNumEmp \ 
+                               AND CodCal = :nCodCal");
+                               
+  SQL_DefinirInteiro(xCur, "nNumEmp", nNumEmp);
+  SQL_DefinirInteiro(xCur, "nCodCal", nCodCal);
+                               
+  SQL_AbrirCursor(xCur);
+  Se(SQL_EOF(xCur)=0)
+    {
+      SQL_RetornarData(xCur, "INICMP", dIniCmp);   
+    }
+  SQL_FecharCursor(xCur);
+  SQL_Destruir(xCur);
+  ConverteMascara(3, dIniCmp, aIniCmp, "MM/YYYY");
+  AlfaparaData(aIniCmp, "MM/YYYY", dIniCmp);
+}Senao {
+  dIniCmp = EDatCmp;
+}
+
+dMesInc = dIniCmp;
+dCmpEmi = dIniCmp;
+dCmpIni = dIniCmp;
+@------------------------------------------------------------------------------@
+SQL_Criar(xCur);
+SQL_DefinirComando(xCur, "SELECT CodPla \
+                            FROM R164ASS \
+                           WHERE NumEmp = :nNumEmp \
+                             AND TipCol = :nTipCol \
+                             AND NumCad = :nNumCad \
+                             AND CodOem = :nCodOem \
+                             AND MesInc <= :dMesInc \
+                             AND MesExc = :dDatZero");
+                            
+SQL_DefinirInteiro(xCur, "nNumEmp", nNumEmp);
+SQL_DefinirInteiro(xCur, "nTipCol", nTipCol);
+SQL_DefinirInteiro(xCur, "nNumCad", nNumCad);
+SQL_DefinirInteiro(xCur, "nCodOem", nCodOem);
+SQL_DefinirData(xCur, "dMesInc", dMesInc);
+SQL_DefinirData(xCur, "dDatZero", dDatZero);
+                             
+SQL_AbrirCursor(xCur);
+Se(SQL_EOF(xCur)=0)
+  {
+    SQL_RetornarInteiro(xCur, "CodPla", nCodPla);   
+  }
+SQL_FecharCursor(xCur);
+SQL_Destruir(xCur);
+@------------------------------------------------------------------------------@
+Se(nFuncionario = 1){
+ nCodDep = 0;
+}Senao {
+  SQL_Criar(xCur);
+  SQL_DefinirComando(xCur, "SELECT CodDep \
+                              FROM R036DEP \
+                             WHERE NumCpf = :nDepCpf ");
+                              
+  SQL_DefinirInteiro(xCur, "nDepCpf", nDepCpf);
+                               
+  SQL_AbrirCursor(xCur);
+  Se(SQL_EOF(xCur)=0)
+    {
+      SQL_RetornarInteiro(xCur, "CodDep", nCodDep);  
+    }
+  SQL_FecharCursor(xCur);
+  SQL_Destruir(xCur);
+}
+@------------------------------------------------------------------------------@
+nSeqUni = 0;
+SQL_Criar(xCur);
+SQL_UsarAbrangencia(xCur, 0);
+SQL_UsarSQLSenior2(xCur, 0);
+xSql = "SELECT MAX(SEQUNI) SEQUNI FROM R164DES WHERE\
+  							NUMEMP = :nNumEmp AND \
+  							TIPCOL = :nTipCol AND \
+  							NUMCAD = :nNumCad AND \
+                CMPEMI = :dIniCmp";
+SQL_DefinirComando(xCur,xSql);  							
+SQL_DefinirInteiro(xCur,"nNumEmp",nNumEmp);
+SQL_DefinirInteiro(xCur,"nTipCol",nTipCol);
+SQL_DefinirInteiro(xCur,"nNumCad",nNumCad);
+SQL_DefinirData(xCur,"dIniCmp",dIniCmp);  
+SQL_AbrirCursor(xCur);
+se (SQL_EOF(xCur) = 0)
+{
+  SQL_RetornarInteiro(xCur, "SEQUNI", nSeqUni); 
+}
+SQL_FecharCursor(xCur);
+SQL_Destruir(xCur);
+nSeqUni++;
+
+@tabela.campo = variavel@
+
+R164DES.NumEmp = nNumEmp;
+R164DES.TipCol = nTipCol;
+R164DES.NumCad = nNumCad;
+R164DES.CmpEmi = dCmpEmi; 
+R164DES.SeqUni = nSeqUni;
+R164DES.CodOem = nCodOem;
+R164DES.CodPla = nCodPla;
+R164DES.CodDep = nCodDep;
+R164DES.VlrSer = nVlrSer;
+R164DES.CmpIni = dCmpIni;
