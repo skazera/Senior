@@ -6,30 +6,20 @@ Definir Alfa aZero;
 Definir Alfa aIniCmp;
 Definir Alfa aFimCmp;
 Definir Alfa aDepCpf;
-
-nCodOem = 24;
+Definir Alfa aCodDepSql;
+Definir Alfa aNumCadSql;
+nCodOem = 25;
 nQtdCar = 0;
 nCodCal = CodCal;
 dDatZero = 0;
-dMesInc = 0;
-dCmpEmi = 0;
-dCmpIni = 0;
-aZero = "";
-aDepCpf = ""; 
-nNumEmp = 0;
-nTipCol = 0;
-nNumCad = 0;
-dIniCmp = 0;
-nCodPla = 0;
-nCodDep = 0;
-nFuncionario = 0; 
 
 /*TrocaString(aVlrSrv, ".", "", aVlrSrv);
-TrocaString(aVlrSrv, ",", "", aVlrSrv); */
-AlfaParaInt (aVlrSrv, nVlrSer);
-                                 
+TrocaString(aVlrSrv, ",", "", aVlrSrv);*/
+TiraEspacos (aVlrSrv, aVlrSrv);
+AlfaParaInt (aVlrSrv, nVlrSer);  
+
 TamanhoAlfa(aNumCpf, nQtdCar);
-                            
+
 Se(nQtdCar < 11){
   Enquanto(nQtdCar < 11){
     aZero = aZero + "0"; 
@@ -37,9 +27,7 @@ Se(nQtdCar < 11){
   }
   aNumCpf = aZero + aNumCpf; 
 }
-aDepCpf = aNumCpf;                                
-@ConverteMascara(5, 0, aDepCpf, "999.999.999-99");@
-AlfaParaInt(aDepCpf, nDepCpf);
+aDepCpf = aNumCpf;
 
 xSql = "SELECT NumEmp, TipCol, NumCad \
           FROM R034FUN \
@@ -58,24 +46,6 @@ Se(SQL_EOF(xCur)=0)
   }
 SQL_FecharCursor(xCur);
 SQL_Destruir(xCur);
-Se(nFuncionario = 0){
-  SQL_Criar(xCur);
-  SQL_DefinirComando(xCur, "SELECT NumEmp, TipCol, NumCad \
-                              FROM R036DEP \
-                             WHERE NumCpf = :nDepCpf");
-                              
-  SQL_DefinirInteiro(xCur, "nDepCpf", nDepCpf);
-                               
-  SQL_AbrirCursor(xCur);
-  Se(SQL_EOF(xCur)=0)
-    {
-     SQL_RetornarInteiro(xCur, "NumEmp", nNumEmp); 
-     SQL_RetornarInteiro(xCur, "TipCol", nTipCol); 
-     SQL_RetornarInteiro(xCur, "NumCad", nNumCad);
-    }
-  SQL_FecharCursor(xCur);
-  SQL_Destruir(xCur);  
-}
 @------------------------------------------------------------------------------@
 Se(EDatCmp = 0){
   SQL_Criar(xCur);
@@ -103,6 +73,42 @@ Se(EDatCmp = 0){
 dMesInc = dIniCmp;
 dCmpEmi = dIniCmp;
 dCmpIni = dIniCmp;
+
+Se(nFuncionario = 1){
+ nCodDep = 0;
+}Senao {  
+  aCodDepSql = "SELECT CodDep \
+                  FROM R036DEP \
+                 WHERE NumCpf = " + aNumCpf;
+                 
+  aNumCadSql = "SELECT NumEmp, TipCol, NumCad \
+                  FROM R036DEP \
+                 WHERE NumCpf = " + aNumCpf;
+  
+  SQL_Criar(xCur); 
+  SQL_DefinirComando(xCur, aCodDepSql);  
+                                                             
+  SQL_AbrirCursor(xCur);
+  Se(SQL_EOF(xCur)=0)
+    {
+      SQL_RetornarInteiro(xCur, "CodDep", nCodDep);  
+    }
+  SQL_FecharCursor(xCur);
+  SQL_Destruir(xCur);
+  @--------------------@
+  SQL_Criar(xCur);    
+  SQL_DefinirComando(xCur, aNumCadSql); 
+                               
+  SQL_AbrirCursor(xCur);
+  Se(SQL_EOF(xCur)=0)
+    {
+      SQL_RetornarInteiro(xCur, "NumEmp", nNumEmp); 
+      SQL_RetornarInteiro(xCur, "TipCol", nTipCol); 
+      SQL_RetornarInteiro(xCur, "NumCad", nNumCad);  
+    }
+  SQL_FecharCursor(xCur);
+  SQL_Destruir(xCur);
+}
 @------------------------------------------------------------------------------@
 SQL_Criar(xCur);
 SQL_DefinirComando(xCur, "SELECT CodPla \
@@ -129,25 +135,6 @@ Se(SQL_EOF(xCur)=0)
 SQL_FecharCursor(xCur);
 SQL_Destruir(xCur);
 @------------------------------------------------------------------------------@
-Se(nFuncionario = 1){
- nCodDep = 0;
-}Senao {
-  SQL_Criar(xCur);
-  SQL_DefinirComando(xCur, "SELECT CodDep \
-                              FROM R036DEP \
-                             WHERE NumCpf = :nDepCpf ");
-                              
-  SQL_DefinirInteiro(xCur, "nDepCpf", nDepCpf);
-                               
-  SQL_AbrirCursor(xCur);
-  Se(SQL_EOF(xCur)=0)
-    {
-      SQL_RetornarInteiro(xCur, "CodDep", nCodDep);  
-    }
-  SQL_FecharCursor(xCur);
-  SQL_Destruir(xCur);
-}
-@------------------------------------------------------------------------------@
 nSeqUni = 0;
 SQL_Criar(xCur);
 SQL_UsarAbrangencia(xCur, 0);
@@ -170,14 +157,13 @@ se (SQL_EOF(xCur) = 0)
 SQL_FecharCursor(xCur);
 SQL_Destruir(xCur);
 nSeqUni++;
-
+@------------------------------------------------------------------------------@
 @tabela.campo = variavel@
 
 R164DES.NumEmp = nNumEmp;
 R164DES.TipCol = nTipCol;
 R164DES.NumCad = nNumCad;
-R164DES.CmpEmi = dCmpEmi; 
-R164DES.SeqUni = nSeqUni;
+R164DES.CmpEmi = dCmpEmi;
 R164DES.CodOem = nCodOem;
 R164DES.CodPla = nCodPla;
 R164DES.CodDep = nCodDep;
